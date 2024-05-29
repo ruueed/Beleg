@@ -26,24 +26,28 @@ node *anfang=NULL;
 
 void anhaengen(char *nam,int nr, int anz, int ct, int cm, int cj){
     char datname[50];
-    datname[0]='\0';
     time_t rawtime;
     struct tm *timeinfo;
 //  Neue Datei erstellen oder alte benutzen
-    printf("möchten Sie eine neue Datei zum speichern der Daten erstellen(1=j/any=n)?\n");
+    printf("möchten Sie eine neue Datei zum speichern der Daten erstellen(j/n)?\n");
     fgets(buf,128,stdin);
-    int wahl =atoi(buf);
-    if(wahl!=1){
+
+    if(buf[0]=='n'){
         printf("In welcher Datei möchten Sie die Daten speichern? (Bitte geben Sie den genauen namen an)\n");
         fgets(buf,128,stdin);
         strcpy(datname,buf);
-
+        for(int i=0;i<sizeof(datname);i++){
+            if(datname[i]=='\n'){
+                datname[i]='\0';
+            }
+        }
     }
-    else{
+    else if(buf[0]=='j'){
         time(&rawtime);
         timeinfo=localtime(&rawtime);
         strftime(datname, sizeof(datname), "verlauf_%Y%m%d.txt", timeinfo);
     }
+    else printf("Falsches Symbol(j oder n auswählen!)\n");
 
 
     node* zeiger;
@@ -142,6 +146,8 @@ void bearbeiten(){
     int nummer=atoi(buf);
 //  Schleife bis Materialnummer gefunden wurde
     while(1){
+        
+         
         if(nummer==zeiger->artnr){
             printf("Mit der Materialnummer uebereinstimmendes Material:%s\n",zeiger->artname);
             printf("Bitte geben Sie die Aenderungen ein:(neue Anzahl d Artikels / Aenderungsdatum)\n");
@@ -156,10 +162,12 @@ void bearbeiten(){
 
             break;
         }
-
-// // // // // // // // // // // // // // // // // // // // // // // // // // // // //
-     // Hier muss noch eine Fehlermeldung hin falls die Artikelnummer nicht existiert
-// // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+        // Fehlermeldung falls Materialnummer nicht existiert
+        else if(zeiger->next==NULL){
+            fprintf(stderr,"Artikelnummer nicht gefunden!\n");
+            break;
+        }
+        else
 
         zeiger=zeiger->next;
     }
