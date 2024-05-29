@@ -144,11 +144,16 @@ void bearbeiten(){
     printf("Artikelnummer des zu bearbeitenden Materials eingeben:\n");
     fgets(buf,128,stdin);
     int nummer=atoi(buf);
+    printf("Materialnamen des zu bearbeitenden Materials eingeben:\n");
+    char name[30];
+    fgets(name,30,stdin);
+    
+
 //  Schleife bis Materialnummer gefunden wurde
     while(1){
         
          
-        if(nummer==zeiger->artnr){
+        if(nummer==zeiger->artnr&& strcmp(name,zeiger->artname)==0){
             printf("Mit der Materialnummer uebereinstimmendes Material:%s\n",zeiger->artname);
             printf("Bitte geben Sie die Aenderungen ein:(neue Anzahl d Artikels / Aenderungsdatum)\n");
             fgets(buf,128,stdin);
@@ -164,7 +169,7 @@ void bearbeiten(){
         }
         // Fehlermeldung falls Materialnummer nicht existiert
         else if(zeiger->next==NULL){
-            fprintf(stderr,"Artikelnummer nicht gefunden!\n");
+            fprintf(stderr,"Kein Artikel mit passender Artikelnummer gefunden!\n");
             break;
         }
         else
