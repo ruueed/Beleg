@@ -24,31 +24,7 @@ node *next=NULL;
 node *anfang=NULL;
 
 
-void anhaengen(char *nam,int nr, int anz, int ct, int cm, int cj){
-    char datname[50];
-    time_t rawtime;
-    struct tm *timeinfo;
-//  Neue Datei erstellen oder alte benutzen
-    printf("möchten Sie eine neue Datei zum speichern der Daten erstellen(j/n)?\n");
-    fgets(buf,128,stdin);
-
-    if(buf[0]=='n'){
-        printf("In welcher Datei möchten Sie die Daten speichern? (Bitte geben Sie den genauen namen an)\n");
-        fgets(buf,128,stdin);
-        strcpy(datname,buf);
-        for(int i=0;i<sizeof(datname);i++){
-            if(datname[i]=='\n'){
-                datname[i]='\0';
-            }
-        }
-    }
-    else if(buf[0]=='j'){
-        time(&rawtime);
-        timeinfo=localtime(&rawtime);
-        strftime(datname, sizeof(datname), "verlauf_%Y%m%d.txt", timeinfo);
-    }
-    else printf("Falsches Symbol(j oder n auswählen!)\n");
-
+void anhaengen(char *nam,int nr, int anz, int ct, int cm, int cj,char *datname){
 
     node* zeiger;
     if (anfang==NULL){
@@ -71,10 +47,7 @@ void anhaengen(char *nam,int nr, int anz, int ct, int cm, int cj){
             exit(EXIT_FAILURE);
         }
         fprintf(file,"%s,%d,%d,%02d,%02d,%d",anfang->artname, anfang->artnr, anfang->anzahl, anfang->date.tag, anfang->date.monat, anfang->date.jahr);
-
         fclose(file);
-
-
     }
     else{
         zeiger = anfang;
@@ -98,14 +71,12 @@ void anhaengen(char *nam,int nr, int anz, int ct, int cm, int cj){
             fprintf(stderr,"Fehler beim öffnen\n");
             exit(EXIT_FAILURE);
         }
-        fprintf(file,"%s,%d,%d,%02d,%02d,%d",zeiger->artname, zeiger->artnr, zeiger->anzahl, zeiger->date.tag, zeiger->date.monat, zeiger->date.jahr);
-
+        fprintf(file,"%s,%d,%d,%02d,%02d,%d\n",zeiger->artname, zeiger->artnr, zeiger->anzahl, zeiger->date.tag, zeiger->date.monat, zeiger->date.jahr);
         fclose(file);
     }
-
 }
 
-void eingabe(){
+void eingabe(char *dtnm){
     char nam[MAX];
     int nr,az,ct,cm,cj;
     printf("Eingabe Artikelname:\n");
@@ -124,11 +95,7 @@ void eingabe(){
     fgets(buf,128,stdin);
     cj=atoi(buf);
 
-    anhaengen(nam,nr,az,ct,cm,cj);
-
-//  Eingegebene Daten werden in einer Datei gespeichert, umd den Bearbeitungsverlauf mit Datum einzusehen
-
-
+    anhaengen(nam,nr,az,ct,cm,cj,dtnm);
 }
 
 void ausgabe(){
@@ -139,7 +106,7 @@ void ausgabe(){
     }
 }
 
-void bearbeiten(){
+void bearbeiten(char *datname){
     node*zeiger=anfang;
     printf("Artikelnummer des zu bearbeitenden Materials eingeben:\n");
     fgets(buf,128,stdin);
@@ -151,20 +118,29 @@ void bearbeiten(){
 
 //  Schleife bis Materialnummer gefunden wurde
     while(1){
-        
-         
         if(nummer==zeiger->artnr&& strcmp(name,zeiger->artname)==0){
+            int anzneu;
+            int anzvorher=zeiger->anzahl;
             printf("Mit der Materialnummer uebereinstimmendes Material:%s\n",zeiger->artname);
             printf("Bitte geben Sie die Aenderungen ein:(neue Anzahl d Artikels / Aenderungsdatum)\n");
             fgets(buf,128,stdin);
             zeiger->anzahl=atoi(buf);
+            anzneu=atoi(buf);
             fgets(buf,128,stdin);
             zeiger->date.tag=atoi(buf);
             fgets(buf,128,stdin);
             zeiger->date.monat=atoi(buf);
             fgets(buf,128,stdin);
             zeiger->date.jahr=atoi(buf);
-
+//Schreiben in Datei
+            FILE * file=fopen(datname,"a+");
+            if (file == NULL){
+            fprintf(stderr,"Fehler beim öffnen\n");
+            exit(EXIT_FAILURE);
+            }
+            fprintf(file,"%s,%d,%d,%02d,%02d,%d\n",zeiger->artname, zeiger->artnr,anzneu-anzvorher, zeiger->date.tag, zeiger->date.monat,
+            zeiger->date.jahr);
+            fclose(file);
             break;
         }
         // Fehlermeldung falls Materialnummer nicht existiert
@@ -173,30 +149,59 @@ void bearbeiten(){
             break;
         }
         else
-
         zeiger=zeiger->next;
     }
 }
 
 int main(){
-    int auswahl=0;
-    do{
-    printf("------Materialverwaltung------\n1. Artikel hinzufügen\n2. Artikel anzeigen\n3. Lagerbestand bearbeiten\n4. Beenden\n"
-           "------------------------------\n");
-    fgets(buf,128,stdin);
-    auswahl=atoi(buf);
+int auswahl=0;
 
-        switch(auswahl){
-            case 1: eingabe();
-                    break;
-            case 2: ausgabe();
-                    break;
-            case 3: bearbeiten();
-                    break;
-            case 4: break;
-            default: printf("falsche Eingabe!\n");
+printf("------Materialverwaltung-----------------------------------------------------------\n"
+       "moechten Sie eine neue Textdatei zum speichern der erfassten Daten erstellen?\n"
+       "(nur nötig wenn Sie an diesem Tag noch keinen Verlauf haben) (j/n)\n"
+       "-----------------------------------------------------------------------------------\n");
+//      Variablen zur Erstellung oder verwendung eines Dateinamen
+        char datname[50];
+        time_t rawtime;
+        struct tm *timeinfo;
+        fgets(buf,128,stdin);
+
+        if(buf[0]=='n'){
+            printf("In welcher Datei möchten Sie die Daten speichern? (Bitte geben Sie den genauen namen an)\n");
+            fgets(buf,128,stdin);
+            strcpy(datname,buf);
+            for(int i=0;i<sizeof(datname);i++){
+                if(datname[i]=='\n'){
+                    datname[i]='\0';
+                }
+            }
         }
-    }while(auswahl!=4);
+        else if(buf[0]=='j'){
+            time(&rawtime);
+            timeinfo=localtime(&rawtime);
+            strftime(datname, sizeof(datname), "verlauf_%Y%m%d.txt", timeinfo);
+        }
+        else fprintf(stderr,"Falsche wahl, bitte wählen Sie zwischen j oder n!\n");
+
+    do{
+
+        printf("------Materialverwaltung------\n"
+               "1. Artikel hinzufügen\n2. Artikel anzeigen\n3. Lagerbestand bearbeiten\n4. Beenden\n"
+               "----------------------------------------------------------------------------------\n");
+        fgets(buf,128,stdin);
+        auswahl=atoi(buf);
+
+            switch(auswahl){
+                case 1: eingabe(datname);
+                        break;
+                case 2: ausgabe();
+                        break;
+                case 3: bearbeiten(datname);
+                        break;
+                case 4: break;
+                default: printf("falsche Eingabe!\n");
+            }
+        }while(auswahl!=4);
 
     return EXIT_SUCCESS;
 }
