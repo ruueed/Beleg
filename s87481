@@ -1,0 +1,175 @@
+#!/bin/bash
+
+#exec 2>/dev/null
+option=$1
+title=$2
+
+isbn_func()
+{
+    lineNmb=0
+    sum=0
+    counter=1
+
+    # Filtern der 8. Spalte und entfernen der Trennzeichen
+    tail -n +2 bib.csv | awk -F'|' '{print $8}' | tr -d '-' | awk 'NF' | while read -r isbn
+
+do
+    isbn_length=${#isbn}
+    if (( $isbn_length != 0 ))
+        then
+        # Test der korrekten Anzahl Ziffern der ISBN
+            if (( $isbn_length != 10 && $isbn_length != 13))
+                then
+echo "Falsche Länge der ISBN: $isbn
+Sie ist $isbn_length-Stellig"
+            fi
+        # Test 10 Stelliger ISBN auf mod11 = 0
+        if [[ $isbn =~ ^[0-9]{9}[0-9X]$ ]]
+                then
+                    #Zusammenrechnen der einzelnen Ziffern nach dem gegebenen Schema
+                    for ((i=0;i<9;i++))
+                    do
+                        digit=${isbn:$i:1}
+                        sum=$(($sum + $digit * $counter))
+                        counter=$(($counter + 1))
+                    done
+                    if [[ ${isbn:9:1} = 'X' ]]
+                    then
+                        sum=$((sum + 10 * 10))
+                    elif [[ ${isbn:9:1} =~ ^[0-9] ]]
+                    then
+                        sum=$((sum + ${isbn:9:1} * 10))
+                    else
+                        echo "Fehlerhafte Länge oder Zeichen der ISBN (10-stellig): $isbn"
+                    fi
+                    #modulare Überprüfung
+                    sum=$(($sum % 11))
+                    if (($sum != 0))
+                    then
+                        echo "Fehlerhafte Bedingung der ISBN (10-stellig): $isbn"
+                        echo $line
+                    fi
+                fi
+
+        sum=0
+        # Das gleiche mit 13 stelligen ISBN (ohne test auf X)
+        if [[ $isbn =~ ^[0-9]{13}$ ]]
+        then
+            for ((i=0; i<13; i++))
+                do
+                    digit=${isbn:$i:1}
+                    # Test gerade oder ungerade Stelle der ISBN
+                    if (($i % 2 == 0))
+                    then
+                        sum=$(($sum + $digit))
+                    else
+                        sum=$(($sum + $digit * 3))
+                    fi
+                done
+                if ((sum % 10 != 0))
+                then
+                    echo "Fehlerhafte Bedingung der ISBN (13-stellig): $isbn"
+                fi
+        fi
+    fi
+done
+    return 0
+}
+
+ minmax_func()
+ {
+
+    echo "Das Buch mit den meisten Seiten ist: "
+    awk -F '|' '$7 > 0' bib.csv | sort -t '|' -k7 -n | awk -F '|' 'NR == 2 {print $1 "|" $2 "|" $7}'
+    echo -e
+
+    echo "Das Buch mit den wenigsten Seiten ist: "
+    awk -F '|' '$7 > 0' bib.csv | sort -t '|' -k7 -n -r | head -n 1 | cut -d '|' -f 1,2,7
+    echo -e
+
+    #Durchschnitt
+    average=0
+    book_count=0
+
+        for pagenumber in $(cut -d '|' -f 7 bib.csv | tail -n +2)
+            do
+                if ((pagenumber > 0))
+                then
+                    average=$((average+ pagenumber))
+                    book_count=$((book_count + 1))
+                fi
+            done
+        if (($book_count != 0))
+        then
+            average=$((average / $book_count))
+
+            echo "Durchschnittliche Seitenanzahl: $average"
+        else
+            echo "Fehler beim Berechnen der durchschnittlichen Seitenzahl."
+        fi
+
+
+ }
+publisher_func()
+{
+    #Filtern der Verlage und anschließende alphabetische Sortierung
+    awk -F'|' '{print $6}' bib.csv | sort
+
+    return 0
+}
+
+ years_func()
+{
+    #Filtern aller 4 stelligen Zahlen aus der 5. Spalte anschließend Sortieren
+    awk -F '|' 'NR > 1 {print $5}' bib.csv | grep -Eo '([0-9]{4})$' | awk 'NF' | sort -n -r | uniq -c | sort -n -r | awk '{print $1 " Buch/Bücher im Jahr " $2}' && echo -e
+    echo -e
+
+    #Bücher Ohne Veröffentlichungsjahr
+    echo "Bücher ohne Veröffentlichungsjahr:"
+    tail -n +2 bib.csv | cut -d '|' -f 5 | sort -n | uniq -c | head -n 1
+
+
+}
+
+ search_func()
+ {
+ #Überprüft existenz von 2. Parameter
+    if [ -z "$title" ]
+    then
+        echo "Der zweite Parameter (Titel) fehlt!"
+        exit -1
+    fi
+
+# Überprüft den 2. Parameter
+    if [[ ! "$title" =~ ^title= ]]
+    then
+        echo "Der zweite Parameter hat nicht das richtige Format (title=xxxx)."
+        exit -1
+    fi
+
+
+    #Suchbegriff vom schlüsselwort trennen und für Suche speichern
+    searchphrase=$(echo "$title" | cut -d '=' -f 2)
+
+
+    #Durchsucht datei und gibt anschließend den kompletten Datensatz vom enthaltenen Search Begriff aus
+    tail -n +2 bib.csv | grep -o "^[^|]*\($searchphrase\)[^|]*\(|\)[^|]*\(|\)[^|]*\(|\)[^|]*\(|\)[^|]*\(|\)[^|]*\(|\)[^|]*\(|\)[^|]*" | while read -r search
+    do
+        echo "$search"
+    done
+
+    return 0
+
+ }
+
+
+
+case "$option" in
+        isbn)       isbn_func;;
+        minmax)     minmax_func;;
+        publisher)  publisher_func;;
+        years)      years_func;;
+        search)     search_func;;
+        *)    echo "Parameter können nur wie folgt übergeben werden: isbn,minmax,publisher,years,search title=xxxx";;
+esac
+exit 0
