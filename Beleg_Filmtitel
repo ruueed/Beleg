@@ -1,0 +1,38 @@
+#!/bin/bash
+
+#exec 2>/dev/null
+
+option=$1
+searchphrase=$2
+dump="movieDump.txt"
+top100="top100.txt"
+
+size_func()
+{
+
+        bytegroesse=$(awk '/^-rw/ {sum += $5} END {print sum}' "$dump")
+        gibibytes=$(echo "scale=2; $bytegroesse / (1024^3)" | bc)
+        echo "Summe aller Filmgroessen: $bytegroesse"
+        echo "Summe in Gibibytes: $gibibytes"
+}
+
+ext_func()
+{
+        extension=$(awk '/^-rw/
+
+        echo ""
+}
+
+
+
+case "$option" in
+        size)       size_func;;
+        hist)       hist_func;;
+        ext)        ext_func;;
+        imbd)       imbd_func;;
+        syntax)     syntax_func;;
+        missing)    missing_func;;
+        search)     search_func;;
+        *)    echo "Parameter können nur wie folgt übergeben werden: size,hist,ext,imbd,syntax,missing,search title=xxxx";;
+esac
+exit 0
